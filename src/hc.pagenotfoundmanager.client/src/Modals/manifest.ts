@@ -1,4 +1,4 @@
-import { ManifestModal } from "@umbraco-cms/backoffice/extension-registry";
+import { ManifestModal } from "@umbraco-cms/backoffice/modal";
 
 const pageNotFoundModal: ManifestModal = {
     type: 'modal',

@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.9.0 <21"
+  },
   "scripts": {
     "build": "tsc && vite build",
     "watch": "vite build --watch",
@@ -12,8 +15,8 @@
     "lit": "^3.1.4"
   },
   "devDependencies": {
-    "@hey-api/openapi-ts": "^0.48.2",
-    "@umbraco-cms/backoffice": "^14.1.0-rc2",
+    "@hey-api/openapi-ts": "^0.55.0",
+    "@umbraco-cms/backoffice": "^15.0.0-rc3",
     "typescript": "^5.2.2",
     "vite": "^5.3.1"
   }

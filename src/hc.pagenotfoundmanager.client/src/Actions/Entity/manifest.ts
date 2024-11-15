@@ -1,5 +1,5 @@
 import { UMB_DOCUMENT_ENTITY_TYPE } from "@umbraco-cms/backoffice/document";
-import { ManifestEntityAction } from "@umbraco-cms/backoffice/extension-registry";
+import { ManifestEntityAction } from "@umbraco-cms/backoffice/entity-action" ;
 import { PageNotFoundEntityAction } from "./pagenotfound.entityaction.ts";
 
 const entityAction: ManifestEntityAction = {

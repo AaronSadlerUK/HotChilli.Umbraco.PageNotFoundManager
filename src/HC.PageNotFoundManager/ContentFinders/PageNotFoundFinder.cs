@@ -2,11 +2,12 @@
 using System.Linq;
 using System.Threading.Tasks;
 using HC.PageNotFoundManager.Config;
+using HC.PageNotFoundManager.Extensions;
 using Umbraco.Cms.Core.Models;
 using Umbraco.Cms.Core.Routing;
 using Umbraco.Cms.Core.Services;
+using Umbraco.Cms.Core.Services.Navigation;
 using Umbraco.Cms.Core.Web;
-using Umbraco.Extensions;
 
 namespace HC.PageNotFoundManager.ContentFinders;
 
@@ -17,15 +18,21 @@ public class PageNotFoundFinder : IContentLastChanceFinder
     private readonly IDomainService domainService;
 
     private readonly IUmbracoContextFactory umbracoContextFactory;
+    private readonly IDocumentUrlService documentUrlService;
+    private readonly IDocumentNavigationQueryService documentNavigationQueryService;
 
     public PageNotFoundFinder(
         IDomainService domainService,
         IUmbracoContextFactory umbracoContextFactory,
+        IDocumentUrlService documentUrlService,
+        IDocumentNavigationQueryService documentNavigationQueryService,
         IPageNotFoundService config)
     {
         this.domainService = domainService ?? throw new ArgumentNullException(nameof(domainService));
         this.umbracoContextFactory =
             umbracoContextFactory ?? throw new ArgumentNullException(nameof(umbracoContextFactory));
+        this.documentUrlService = documentUrlService;
+        this.documentNavigationQueryService = documentNavigationQueryService;
         this.config = config ?? throw new ArgumentNullException(nameof(config));
     }
 
@@ -41,7 +48,7 @@ public class PageNotFoundFinder : IContentLastChanceFinder
         if (domains.Count != 0)
         {
             //A domain can be defined with or without http(s) so we neet to check for both cases.
-            IDomain domain = null;
+            IDomain? domain = null;
             foreach (var currentDomain in domains)
             {
                 if (IsCurrentDomainIsAbsoluteAndCurrentRequestStartsWithDomain(request, currentDomain)
@@ -61,35 +68,32 @@ public class PageNotFoundFinder : IContentLastChanceFinder
 
         using (var umbracoContext = umbracoContextFactory.EnsureUmbracoContext())
         {
-            var closestContent = umbracoContext.UmbracoContext.Content?.GetByRoute(
-                domainRoutePrefixId + uri,
-                false,
-                request?.Culture);
-            while (closestContent == null)
+            var documentKey = documentUrlService.GetDocumentKeyByRoute(domainRoutePrefixId + uri, request.Culture, null, false);            
+            while (documentKey == null)
             {
                 uri = uri.Remove(uri.Length - 1, 1);
-                closestContent = umbracoContext.UmbracoContext.Content?.GetByRoute(
-                    domainRoutePrefixId + uri,
-                    false,
-                    request?.Culture);
+                documentKey = documentUrlService.GetDocumentKeyByRoute(domainRoutePrefixId + uri, request.Culture, null, false);
             }
 
-            var nfp = config.GetNotFoundPage(closestContent.Key);
+            var contentNode = documentKey != null ? umbracoContext.UmbracoContext.Content.GetById(documentKey!.Value) : null;
 
-            var nfpKey = nfp.Explicit404 ?? nfp.Inherited404?.Explicit404 ?? Guid.Empty;
+            var nfp = config.GetNotFoundPage(documentKey ?? Guid.Empty);
+
+            var nfpKey = nfp?.Explicit404 ?? nfp?.Inherited404?.Explicit404 ?? Guid.Empty;
             var content = umbracoContext.UmbracoContext.Content.GetById(nfpKey);
 
-            while (content == null || closestContent.Parent != null)
+            while (content == null && contentNode.TryGetParent(documentNavigationQueryService, 
+                umbracoContext.UmbracoContext.Content, out var parent) && parent != null)
             {
-                closestContent = closestContent.Parent;
+                contentNode = parent;
 
-                if (closestContent == null)
+                if (contentNode == null)
                 {
                     return false;
                 }
 
-                nfp = config.GetNotFoundPage(closestContent.Key);
-                nfpKey = nfp.Explicit404 ?? nfp.Inherited404?.Explicit404 ?? Guid.Empty;
+                nfp = config.GetNotFoundPage(contentNode.Key);
+                nfpKey = nfp?.Explicit404 ?? nfp?.Inherited404?.Explicit404 ?? Guid.Empty;
                 content = umbracoContext.UmbracoContext.Content.GetById(nfpKey);
             }            
 
