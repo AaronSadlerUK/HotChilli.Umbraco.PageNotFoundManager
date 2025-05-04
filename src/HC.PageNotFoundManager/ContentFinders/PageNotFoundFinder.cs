@@ -43,6 +43,9 @@ public class PageNotFoundFinder : IContentLastChanceFinder
         //get domain name from Uri
         // find umbraco home node for uri's domain, and get the id of the node it is set on
 
+        if (uri.StartsWith("/umbraco-signin"))
+            return false;
+
         var domains = (await domainService.GetAllAsync(true)).ToList();
         var domainRoutePrefixId = string.Empty;
         if (domains.Count != 0)
